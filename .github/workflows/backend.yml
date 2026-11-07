@@ -67,18 +67,6 @@ jobs:
       id-token: write 
       contents: read
     steps:
-      # Debug: prints the values AWS checks in the trust policy (not the token itself). Remove later.
-      - name: Show OIDC claims
-        run: |
-          TOKEN=$(curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
-          python3 -c "import sys,json,base64; p=sys.argv[1].split('.')[1]; p+='='*(-len(p)%4); c=json.loads(base64.urlsafe_b64decode(p)); print(json.dumps({k:c.get(k) for k in ['sub','aud','iss','ref','event_name']}, indent=2))" "$TOKEN"
-
-      - uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Pull the new image and restart the backend on EC2
         env:
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
