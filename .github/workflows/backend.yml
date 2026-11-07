@@ -67,6 +67,11 @@ jobs:
       id-token: write 
       contents: read
     steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Pull the new image and restart the backend on EC2
         env:
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
