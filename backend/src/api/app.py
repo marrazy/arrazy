@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
  
-from api.routers import aqi, spotify
+from api.routers import aqi, spotify, spotify_extra
 
  
  
@@ -29,6 +29,7 @@ app.add_middleware(
  
 app.include_router(spotify.router, prefix="/v1")
 app.include_router(aqi.router, prefix="/v1")
+app.include_router(spotify_extra.router, prefix="/v1")
  
  
 @app.get("/health")

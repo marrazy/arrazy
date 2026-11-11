@@ -1,0 +1,17 @@
+{
+  "artists": [
+    {
+      "name": "underscores",
+      "albums": [
+        "https://open.spotify.com/album/1qSS0T6Ffrb3rFVpizzOuk?si=6TGgl0DtQnukzZKE2xnohw",
+        "https://open.spotify.com/album/0mQPq9INcTC48siErksOrl?si=-D8Ng796Tky43Tsa9vJ4TQ"
+      ]
+    },
+    {
+      "name": "Jane Remover",
+      "albums": [
+        "https://open.spotify.com/album/0rsCXQ9QyrLaTc2a5fvsZR?si=6jt1YLTESQ2gMY8ZuccbMg"
+      ]
+    }
+  ]
+}
