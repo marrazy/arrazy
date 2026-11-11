@@ -5,6 +5,8 @@ export type NowPlaying = {
   playing: boolean;
   title: string | null;
   artist: string | null;
+  artist_image?: string | null;
+  artist_url?: string | null;
   album_art: string | null;
   url: string | null;
   played_at?: string | null;

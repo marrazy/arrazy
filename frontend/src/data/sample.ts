@@ -6,6 +6,8 @@ export const sampleNowPlaying: NowPlaying = {
   playing: true,
   title: "Wish U Well",
   artist: "underscores",
+  artist_image: null,
+  artist_url: null,
   album_art: null,
   url: null,
 };

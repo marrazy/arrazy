@@ -113,12 +113,13 @@ function CardBody({ kind, np, top, foot }: { kind: CardKind; np: NowPlaying; top
     label = np.playing ? <><span className="eq"><i /><i /><i /></span>Now playing</> : "Last played";
     [image, name, sub, url, round] = [np.album_art, np.title, np.artist, np.url, false];
   } else if (kind === "top") {
-    label = "Most played this year";
+    label = "Most played, past 6 months";
     [image, name, url, round] = [top.image, top.name, top.url, true];
-    sub = top.hours != null ? `${top.hours} hours listened this year` : null;
+    sub = top.hours != null ? `${top.hours} hours listened in the past 6 months` : null;
   } else {
+    // Same layout as the top artist card: round photo, name, Spotify link
     label = "Artist";
-    [image, name, sub, url, round] = [null, np.artist, null, null, true];
+    [image, name, sub, url, round] = [np.artist_image ?? null, np.artist, null, np.artist_url ?? null, true];
   }
   return (
     <>

@@ -1,6 +1,6 @@
 """Extra Spotify routes for the website.
 
-GET /v1/spotify/top-artist   your most played artist over about the last year
+GET /v1/spotify/top-artist   your most played artist over about the last 6 months
 GET /v1/spotify/playlist     the albums listed in data/playlist.json, filled in from Spotify
 
 Both reuse the shared SpotifyClient from routers/spotify.py, so there is only one
@@ -19,7 +19,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
-from api.routers.spotify import spotify
+from api.routers.spotify import pick_image, spotify
 
 router = APIRouter(prefix="/spotify", tags=["spotify"])
 
@@ -81,13 +81,6 @@ async def spotify_get(url: str, params: dict[str, Any] | None = None) -> dict[st
     return {}
 
 
-def pick_image(images: list[dict[str, Any]] | None) -> str | None:
-    # Spotify lists images largest first; the middle one (about 300px) is enough here
-    if not images:
-        return None
-    return (images[1] if len(images) > 1 else images[0]).get("url")
-
-
 def album_id(value: str) -> str:
     """Accepts an album link, a spotify:album: URI, or a bare 22-character ID."""
     value = value.strip()
@@ -141,8 +134,9 @@ async def top_artist(response: Response) -> TopArtist:
         if _top["data"] and time.monotonic() - _top["at"] < TOP_ARTIST_CACHE_SECONDS:
             return _top["data"]
         try:
+            # Spotify's ranges: short_term ~4 weeks, medium_term ~6 months, long_term ~1 year
             data = await spotify_get(
-                f"{API}/me/top/artists", {"time_range": "long_term", "limit": 1}
+                f"{API}/me/top/artists", {"time_range": "medium_term", "limit": 1}
             )
             items = data.get("items") or []
             if not items:
