@@ -1,5 +1,4 @@
 ---
-import { Image, getImage } from "astro:assets";
 import Base from "../../layouts/Base.astro";
 import { getCities, getPhotos, hasRealPhotos } from "../../lib/photos";
 
@@ -17,27 +16,38 @@ const cityName = city ? getCities().find((c) => c.slug === city)?.name : undefin
 const OFFSETS = [0, 120, 40, 220, 0, 160, 72, 280, 16, 96];
 const hash = (text: string) => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-const tiles = await Promise.all(
-  photos.map(async (p) => ({
-    ...p,
-    offset: OFFSETS[hash(p.id) % OFFSETS.length],
-    alt: `${p.city}, photo ${p.n}`,
-    // A bigger copy for the lightbox
-    full: p.image ? (await getImage({ src: p.image, width: 1800 })).src : undefined,
-  })),
-);
+const tiles = photos.map((p) => ({
+  ...p,
+  offset: OFFSETS[hash(p.id) % OFFSETS.length],
+  alt: `${p.city}, photo ${p.n}`,
+}));
 ---
 
 <Base title={cityName ? `Life · ${cityName}` : "Life"}>
   <h1 class="title">{cityName ?? "Life"}</h1>
-  {!hasRealPhotos() && <p class="note">These are empty frames. Add photos to src/assets/life/&lt;city&gt;/ and they show up here.</p>}
+  {!hasRealPhotos() && <p class="note">These are empty frames. Upload photos to R2 and run Sync photos, and they show up here.</p>}
   <div class="grid">
     {
-      tiles.map((t) => (
+      tiles.map((t, i) => (
         <figure class="tile" style={`--offset: ${t.offset}px`}>
           {t.image ? (
-            <a class="img" href={t.full} data-num={t.n} data-astro-prefetch="false">
-              <Image src={t.image} alt={t.alt} widths={[240, 480, 720]} sizes="(max-width: 820px) 33vw, 15vw" />
+            <a
+              class="img"
+              href={t.image.full}
+              data-num={t.n}
+              data-astro-prefetch="false"
+              style={`aspect-ratio: ${t.image.width} / ${t.image.height}`}
+            >
+              <img
+                src={t.image.src}
+                srcset={t.image.srcset}
+                sizes="(max-width: 820px) 50vw, 25vw"
+                width={t.image.width}
+                height={t.image.height}
+                alt={t.alt}
+                loading={i < 4 ? "eager" : "lazy"}
+                decoding="async"
+              />
             </a>
           ) : (
             <div class="img" style={`aspect-ratio: 1 / ${t.ratio}`}>

@@ -1,0 +1,63 @@
+# Lists the photos in R2 into frontend/src/data/photos.json, commits it if it changed,
+# then starts the frontend deploy. Run it from the Actions tab (or the GitHub app) after uploading photos.
+# Needs the repository secrets R2_ENDPOINT, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY.
+name: Sync photos
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: sync-photos
+  cancel-in-progress: false # let a running sync finish; the next one waits
+
+permissions:
+  contents: write # push the updated photos.json
+  actions: write # start the frontend workflow
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: List photos in R2
+        run: npm run photos
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+      - name: Commit photos.json if it changed
+        id: commit
+        run: |
+          if git diff --quiet -- src/data/photos.json; then
+            echo "No photo changes, nothing to deploy."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/photos.json
+          git commit -m "Sync photos"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN don't start other workflows, so start the deploy here
+      - name: Deploy the site
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run frontend.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

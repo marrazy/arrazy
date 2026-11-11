@@ -54,9 +54,36 @@ Write the post here in Markdown.
 
 ## Add photos to Life
 
-Put photos in `src/assets/life/<city>/`, for example `src/assets/life/sydney/01-harbour.jpg`.
-Each folder becomes a city in the menu with its own page, and `hong-kong` shows as "Hong Kong".
-Photos are shown in file name order. Astro shrinks and converts them when it builds.
+Photos live in Cloudflare R2 (bucket `arrazy-photos`, served at https://img.arrazy.com), not in this repo.
+Each folder in the bucket is a city: `jakarta/IMG_0808.jpg` shows under Jakarta, and `hong-kong/`
+shows as "Hong Kong" with its own page at `/life/hong-kong/`. Photos are shown and numbered in file
+name order (numbers compared as numbers), so name files `01-...`, `02-...` to control the order.
+Cloudflare resizes and converts them on the fly, so upload the originals.
+
+**1. Upload**
+
+- **Cloudflare dashboard** (works from a phone too): R2 → `arrazy-photos` → open or create the city
+  folder → Upload.
+- **From your computer**, with the AWS CLI and an `r2` profile that has your R2 keys
+  (`aws configure --profile r2`, region `auto`):
+
+  ```bash
+  aws s3 sync ./photos/sydney s3://arrazy-photos/sydney \
+    --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+  ```
+
+**2. Sync**
+
+The site only knows about photos listed in `src/data/photos.json`. To update it:
+
+- **GitHub** (website or app): Actions → **Sync photos** → Run workflow. It updates `photos.json`,
+  commits it to `main`, and starts the Frontend deploy. If nothing changed, it stops there.
+- **Locally**: `npm run photos`, then commit `src/data/photos.json` yourself. This needs
+  `R2_ENDPOINT`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (and optionally `R2_BUCKET`)
+  in `frontend/.env`, which git and Docker both ignore.
+
+Only new or changed photos are downloaded (to read their size), so syncing stays quick.
+Deleting a photo from R2 removes it from the site on the next sync.
 
 ## Add albums to Playlist
 
