@@ -414,8 +414,9 @@ ul {
 }
 
 .tool__icon {
-  flex: 0 0 18px;
+  flex: none;
   display: inline-flex;
+  gap: 5px;
   color: var(--text-soft);
 }
 

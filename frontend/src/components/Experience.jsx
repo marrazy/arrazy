@@ -1,4 +1,5 @@
 import { TOOLS } from '../config.js'
+import { BrandIcon } from './BrandIcon.jsx'
 import { Icon } from './Icon.jsx'
 
 export function Experience() {
@@ -15,7 +16,11 @@ export function Experience() {
         {TOOLS.map((tool) => (
           <li className="tool" key={tool.name}>
             <span className="tool__icon">
-              <Icon name={tool.icon} size={18} strokeWidth={1.8} />
+              {tool.logos ? (
+                tool.logos.map((logo) => <BrandIcon key={logo.title} icon={logo} size={18} />)
+              ) : (
+                <Icon name={tool.icon} size={18} strokeWidth={1.8} />
+              )}
             </span>
             <span className="tool__name">{tool.name}</span>
           </li>

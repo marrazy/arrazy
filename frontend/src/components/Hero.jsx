@@ -1,4 +1,8 @@
+import { siGithub } from 'simple-icons'
+
 import { LINKS, TEMP_STATUS } from '../config.js'
+import { linkedin } from '../logos.js'
+import { BrandIcon } from './BrandIcon.jsx'
 import { Icon } from './Icon.jsx'
 
 export function Hero() {
@@ -23,14 +27,13 @@ export function Hero() {
             <Icon name="file" />
             Resume
           </a>
-          {/* Icon stand-ins: swap for the official GitHub / LinkedIn logos */}
           <a className="button" href={LINKS.github} target="_blank" rel="noopener">
-            <Icon name="code" />
+            <BrandIcon icon={siGithub} />
             GitHub
             <Icon name="arrowUpRight" size={14} />
           </a>
           <a className="button" href={LINKS.linkedin} target="_blank" rel="noopener">
-            <Icon name="person" />
+            <BrandIcon icon={linkedin} />
             LinkedIn
             <Icon name="arrowUpRight" size={14} />
           </a>
