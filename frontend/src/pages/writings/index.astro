@@ -1,0 +1,28 @@
+---
+import { Image } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import { formatDate, getPosts } from "../../lib/writings";
+
+const posts = await getPosts();
+---
+
+<Base title="Writings">
+  <h1 class="title">Writings</h1>
+  <div class="posts">
+    {
+      posts.map(({ post, no }) => (
+        <a class="post-card" href={`/writings/${post.id}/`}>
+          <div class="post-text">
+            <p class="post-meta">{no} · {post.data.tag}</p>
+            <h2 class="post-title">{post.data.title}</h2>
+            <p class="post-lede">{post.data.lede}</p>
+            <p class="post-date">{formatDate(post.data.date)}</p>
+          </div>
+          <div class="post-img">
+            {post.data.image ? <Image src={post.data.image} alt="" widths={[400, 800]} sizes="(max-width: 820px) 100vw, 330px" /> : "add an image"}
+          </div>
+        </a>
+      ))
+    }
+  </div>
+</Base>

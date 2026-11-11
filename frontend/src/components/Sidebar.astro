@@ -1,0 +1,56 @@
+---
+import { LINKS, NAV, SITE } from "../config";
+import { getCities } from "../lib/photos";
+
+const path = Astro.url.pathname;
+const isActive = (href: string) => path === href || path.startsWith(href);
+const cities = path.startsWith("/life") ? getCities() : [];
+---
+
+<aside class="side">
+  <a class="brand" href="/">{SITE.name}</a>
+
+  <nav class="nav" aria-label="Main">
+    {
+      NAV.map((item) => (
+        <>
+          <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+            {item.label}
+          </a>
+          {item.href === "/life/" && cities.length > 0 && (
+            <div class="sub">
+              <a href="/life/" aria-current={path === "/life/" || path === "/life" ? "page" : undefined}>
+                All
+              </a>
+              {cities.map((c) => (
+                <a href={`/life/${c.slug}/`} aria-current={path.startsWith(`/life/${c.slug}`) ? "page" : undefined}>
+                  {c.name}
+                </a>
+              ))}
+            </div>
+          )}
+        </>
+      ))
+    }
+  </nav>
+
+  <div class="side-foot">
+    <div class="contact-list" id="contact-list" hidden>
+      <a href={LINKS.github} target="_blank" rel="noopener">GitHub</a>
+      <a href={LINKS.linkedin} target="_blank" rel="noopener">LinkedIn</a>
+      <a href={`mailto:${SITE.email}`}>Email</a>
+      <span class="mail">{SITE.email}</span>
+    </div>
+    <button class="contact-toggle" aria-expanded="false" aria-controls="contact-list">Contact</button>
+  </div>
+</aside>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>(".contact-toggle");
+  const list = document.getElementById("contact-list");
+  toggle?.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.setAttribute("aria-expanded", String(open));
+    if (list) list.hidden = !open;
+  });
+</script>

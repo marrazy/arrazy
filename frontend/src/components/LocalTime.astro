@@ -1,0 +1,32 @@
+---
+// "it's currently 11:42 pm here in Sydney, so i'm probably resting."
+// The time is filled in by the browser, so it's always live.
+import { SITE } from "../config";
+---
+
+<span class="local-time" data-tz={SITE.timezone}>
+  it's currently <span class="live" data-clock>…</span> here in {SITE.city}, so i'm probably
+  <span class="live" data-doing>…</span>.
+</span>
+
+<script>
+  function activity(hour: number) {
+    if (hour < 6) return "sleeping";
+    if (hour < 9) return "waking up";
+    if (hour < 18) return "doing work or studying";
+    if (hour < 23) return "resting";
+    return "sleeping";
+  }
+  function update() {
+    for (const el of document.querySelectorAll<HTMLElement>(".local-time")) {
+      const timeZone = el.dataset.tz!;
+      const now = new Date();
+      const clock = now.toLocaleTimeString("en-AU", { timeZone, hour: "numeric", minute: "2-digit" }).toLowerCase();
+      const hour = Number(now.toLocaleString("en-AU", { timeZone, hour: "numeric", hourCycle: "h23" }));
+      el.querySelector("[data-clock]")!.textContent = clock;
+      el.querySelector("[data-doing]")!.textContent = activity(hour);
+    }
+  }
+  update();
+  setInterval(update, 1000);
+</script>

@@ -1,0 +1,102 @@
+---
+import { Image, getImage } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import { getCities, getPhotos, hasRealPhotos } from "../../lib/photos";
+
+// /life/ shows every photo, /life/<city>/ shows one city
+export function getStaticPaths() {
+  return [{ params: { city: undefined } }, ...getCities().map((c) => ({ params: { city: c.slug } }))];
+}
+
+const { city } = Astro.params;
+const photos = getPhotos().filter((p) => !city || p.slug === city);
+const cityName = city ? getCities().find((c) => c.slug === city)?.name : undefined;
+
+// How far each photo is pushed down, picked from its file path so the layout looks scattered
+// but stays the same on every build. Change these numbers to make it busier or calmer.
+const OFFSETS = [0, 120, 40, 220, 0, 160, 72, 280, 16, 96];
+const hash = (text: string) => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+const tiles = await Promise.all(
+  photos.map(async (p) => ({
+    ...p,
+    offset: OFFSETS[hash(p.id) % OFFSETS.length],
+    alt: `${p.city}, photo ${p.n}`,
+    // A bigger copy for the lightbox
+    full: p.image ? (await getImage({ src: p.image, width: 1800 })).src : undefined,
+  })),
+);
+---
+
+<Base title={cityName ? `Life · ${cityName}` : "Life"}>
+  <h1 class="title">{cityName ?? "Life"}</h1>
+  {!hasRealPhotos() && <p class="note">These are empty frames. Add photos to src/assets/life/&lt;city&gt;/ and they show up here.</p>}
+  <div class="grid">
+    {
+      tiles.map((t) => (
+        <figure class="tile" style={`--offset: ${t.offset}px`}>
+          {t.image ? (
+            <a class="img" href={t.full} data-num={t.n} data-astro-prefetch="false">
+              <Image src={t.image} alt={t.alt} widths={[240, 480, 720]} sizes="(max-width: 820px) 33vw, 15vw" />
+            </a>
+          ) : (
+            <div class="img" style={`aspect-ratio: 1 / ${t.ratio}`}>
+              {t.city.toLowerCase()}
+            </div>
+          )}
+          <figcaption class="num">{t.n}</figcaption>
+        </figure>
+      ))
+    }
+  </div>
+
+  <dialog class="lightbox" aria-label="Photo viewer" tabindex="-1">
+    <img alt="" />
+    <div class="lb-bar">
+      <button type="button" class="lb-prev" aria-label="Previous photo">←</button>
+      <span class="lb-num"></span>
+      <button type="button" class="lb-next" aria-label="Next photo">→</button>
+      <button type="button" class="lb-close">Close</button>
+    </div>
+  </dialog>
+</Base>
+
+<script>
+  // Clicking a photo opens it large. Arrow keys move between photos, Esc or a click outside closes.
+  // Without JavaScript, the links still open the big photo on its own.
+  const dialog = document.querySelector<HTMLDialogElement>(".lightbox")!;
+  const big = dialog.querySelector("img")!;
+  const num = dialog.querySelector(".lb-num")!;
+  const links = [...document.querySelectorAll<HTMLAnchorElement>(".grid a.img")];
+  let current = 0;
+
+  function show(index: number) {
+    current = (index + links.length) % links.length;
+    const link = links[current];
+    big.src = link.href;
+    big.alt = link.querySelector("img")?.alt ?? "";
+    num.textContent = `${link.dataset.num} · ${current + 1} of ${links.length}`;
+  }
+
+  links.forEach((link, index) =>
+    link.addEventListener("click", (event) => {
+      // Let cmd/ctrl/shift-click open the photo in a new tab as usual
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      show(index);
+      dialog.showModal();
+      dialog.focus(); // not the first button, which would show a focus ring
+    }),
+  );
+
+  dialog.querySelector(".lb-prev")!.addEventListener("click", () => show(current - 1));
+  dialog.querySelector(".lb-next")!.addEventListener("click", () => show(current + 1));
+  dialog.querySelector(".lb-close")!.addEventListener("click", () => dialog.close());
+  // The dialog fills the screen, so a click on it (not on the photo or buttons) is a click outside
+  dialog.addEventListener("click", (event) => event.target === dialog && dialog.close());
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") show(current - 1);
+    if (event.key === "ArrowRight") show(current + 1);
+  });
+  dialog.addEventListener("close", () => links[current]?.focus());
+</script>

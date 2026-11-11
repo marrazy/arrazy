@@ -1,0 +1,30 @@
+---
+import Base from "../layouts/Base.astro";
+import { projects } from "../data/projects";
+---
+
+<Base title="Projects">
+  <h1 class="title">Projects</h1>
+  <div class="rows">
+    {
+      projects.map((p, i) => (
+        <details class="row" open={i === 0}>
+          <summary>
+            {p.mark === "dot" ? <span class="dot" /> : <span class="mark">{p.mark}</span>}
+            <span class="row-title">{p.title}</span>
+            <span class="plus" aria-hidden="true">+</span>
+          </summary>
+          <div class="row-inner">
+            {p.body.map((text) => <p>{text}</p>)}
+            {p.meta && <p class="meta">{p.meta}</p>}
+            {p.link && (
+              <p>
+                <a class="link" href={p.link.href} target="_blank" rel="noopener">{p.link.text} ↗</a>
+              </p>
+            )}
+          </div>
+        </details>
+      ))
+    }
+  </div>
+</Base>

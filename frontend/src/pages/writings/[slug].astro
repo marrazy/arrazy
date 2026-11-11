@@ -1,0 +1,47 @@
+---
+import { Image } from "astro:assets";
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { formatDate, getPosts, readTime } from "../../lib/writings";
+
+// One page per Markdown file, built ahead of time
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map(({ post, no }, i) => ({
+    params: { slug: post.id },
+    props: { post, no, newer: posts[i - 1], older: posts[i + 1] },
+  }));
+}
+
+const { post, no, newer, older } = Astro.props;
+const { Content } = await render(post);
+---
+
+<Base title={post.data.title} description={post.data.lede}>
+  <article class="reader">
+    <a class="back" href="/writings/">← Writings</a>
+    <h1>{post.data.title}</h1>
+    <p class="lede">{post.data.lede}</p>
+    <p class="meta">{no} · {formatDate(post.data.date)} · {readTime(post)} · <span class="tag">{post.data.tag}</span></p>
+    {post.data.image && (
+      <div class="hero">
+        <Image src={post.data.image} alt="" widths={[720, 1440]} sizes="(max-width: 820px) 100vw, 720px" />
+      </div>
+    )}
+    <div class="prose"><Content /></div>
+    <nav class="end">
+      {older && (
+        <a class="pn" href={`/writings/${older.post.id}/`}>
+          <small>← Older · {older.no}</small>
+          <span>{older.post.data.title}</span>
+        </a>
+      )}
+      {newer && (
+        <a class="pn next" href={`/writings/${newer.post.id}/`}>
+          <small>Newer · {newer.no} →</small>
+          <span>{newer.post.data.title}</span>
+        </a>
+      )}
+    </nav>
+  </article>
+</Base>
