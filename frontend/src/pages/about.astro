@@ -17,6 +17,11 @@ import { LINKS, SITE } from "../config";
         where I will be joining their Digital Analytics Solution team for 3 months.
       </p>
     </div>
+    <div class="links">
+      <a href={SITE.resume} target="_blank" rel="noopener">Resume ↗</a>
+      <a href={LINKS.github} target="_blank" rel="noopener">GitHub ↗</a>
+      <a href={LINKS.linkedin} target="_blank" rel="noopener">LinkedIn ↗</a>
+    </div>
 
     <h2>Experience</h2>
     <div>
@@ -47,10 +52,8 @@ import { LINKS, SITE } from "../config";
       }
     </div>
 
-    <div class="links">
-      <a href={SITE.resume} target="_blank" rel="noopener">Resume ↗</a>
-      <a href={LINKS.github} target="_blank" rel="noopener">GitHub ↗</a>
-      <a href={LINKS.linkedin} target="_blank" rel="noopener">LinkedIn ↗</a>
-    </div>
+    <p class="built">
+      This website itself is built using FastAPI and Astro, hosted on AWS, and protected by Cloudflare.
+    </p>
   </section>
 </Base>
