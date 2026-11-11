@@ -69,16 +69,44 @@ export default function MusicLine() {
     return () => { document.removeEventListener("click", onClick); document.removeEventListener("keydown", onKey); };
   }, [card]);
 
-  function open(kind: CardKind, el: HTMLElement) {
-    if (card?.kind === kind) return setCard(null);
+  // On computers with a mouse, cards open on hover. Phones and tablets keep tap to open.
+  const [canHover, setCanHover] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(hover: hover) and (pointer: fine)");
+    setCanHover(query.matches);
+    const onChange = () => setCanHover(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  // A short wait before closing, so the mouse can cross the gap into the card
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelClose = () => clearTimeout(closeTimer.current);
+  const closeSoon = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setCard(null), 220);
+  };
+  useEffect(() => cancelClose, []);
+
+  function open(kind: CardKind, el: HTMLElement, toggle = true) {
+    cancelClose();
+    if (card?.kind === kind) return toggle ? setCard(null) : undefined;
     const r = el.getBoundingClientRect();
     const width = Math.min(340, document.documentElement.clientWidth - 32);
     const left = Math.min(Math.max(16, r.left + scrollX), scrollX + document.documentElement.clientWidth - width - 16);
     setCard({ kind, left, top: r.bottom + scrollY + 12 });
   }
 
-  const Pick = ({ kind, children }: { kind: CardKind; children: ReactNode }) => (
-    <button className="pick" aria-expanded={card?.kind === kind} onClick={(e) => open(kind, e.currentTarget)}>
+  // A plain function, not a component, so the buttons aren't rebuilt (and re-hovered) on every render
+  const pick = (kind: CardKind, children: ReactNode) => (
+    <button
+      className="pick"
+      aria-expanded={card?.kind === kind}
+      // With a mouse, a click keeps the hovered card open instead of closing it
+      onClick={(e) => open(kind, e.currentTarget, !canHover)}
+      onMouseEnter={canHover ? (e) => open(kind, e.currentTarget, false) : undefined}
+      onMouseLeave={canHover ? closeSoon : undefined}
+    >
       {children}
     </button>
   );
@@ -86,14 +114,21 @@ export default function MusicLine() {
   return (
     <>
       <p>
-        i enjoy listening to music, especially from <Pick kind="top">{top.name}</Pick>, and{" "}
+        i enjoy listening to music, especially from {pick("top", top.name)}, and{" "}
         {np.playing ? "am currently listening to" : "the last song i played was"}{" "}
-        <Pick kind="track">{np.title}</Pick> by <Pick kind="artist">{np.artist}</Pick>. check my{" "}
+        {pick("track", np.title)} by {pick("artist", np.artist)}. check my{" "}
         <a className="u" href="/playlist/">playlists</a>.
       </p>
       {card &&
         createPortal(
-          <div className="np-card" role="dialog" ref={cardRef} style={{ left: card.left, top: card.top }}>
+          <div
+            className="np-card"
+            role="dialog"
+            ref={cardRef}
+            style={{ left: card.left, top: card.top }}
+            onMouseEnter={canHover ? cancelClose : undefined}
+            onMouseLeave={canHover ? closeSoon : undefined}
+          >
             <CardBody
               kind={card.kind}
               np={np}
