@@ -1,4 +1,4 @@
-// About page lists. The intro text lives in src/pages/about.astro.
+// Work page lists. The intro text lives in src/pages/work.astro.
 
 export type Experience = { when: string; org: string; orgUrl?: string; role: string; text: string };
 

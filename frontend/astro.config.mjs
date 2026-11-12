@@ -11,4 +11,6 @@ export default defineConfig({
   compressHTML: false,
   // Load the next page in the background when a link is hovered, so moving around feels instant
   prefetch: { prefetchAll: true, defaultStrategy: "hover" },
+  // The About page is now Work; keep old links working
+  redirects: { "/about": "/work/" },
 });

@@ -25,7 +25,7 @@ PUBLIC_API_URL=http://127.0.0.1:8000/v1
 | --- | --- |
 | Name, email, links, API address, time zone | `src/config.ts` |
 | Home page text | `src/pages/index.astro` |
-| About intro | `src/pages/about.astro` |
+| Work intro | `src/pages/work.astro` |
 | Experience and tools | `src/data/about.ts` |
 | Projects | `src/data/projects.ts` |
 | Colours, fonts, spacing | `src/styles/global.css` |

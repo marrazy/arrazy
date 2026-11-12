@@ -24,7 +24,7 @@ export const LINKS = {
 };
 
 export const NAV = [
-  { href: "/about/", label: "About" },
+  { href: "/work/", label: "Work" },
   { href: "/writings/", label: "Writings" },
   { href: "/life/", label: "Life" },
   { href: "/playlist/", label: "Playlist" },
