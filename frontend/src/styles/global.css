@@ -231,9 +231,12 @@ h1.title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-heig
 @keyframes fade-in { from { opacity: 0; } }
 
 /* ---------- playlist ---------- */
-.artist { margin-bottom: 72px; }
+/* Artists sit side by side when they fit. Each one asks for room for its albums
+   (--n albums × --col wide); a big one shrinks to the row and its albums wrap instead. */
+.artists { --col: 140px; --album-gap: 22px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 72px 64px; max-width: 1500px; }
+.artist { flex: 0 1 calc(var(--n, 1) * (var(--col) + var(--album-gap)) - var(--album-gap)); min-width: var(--col); }
 .artist h2 { font-size: 18px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 22px; }
-.albums { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 36px 22px; max-width: 1500px; }
+.albums { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--col), 1fr)); gap: 36px var(--album-gap); }
 .cover {
   width: 100%; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden;
   background: var(--tile); color: var(--placeholder); font-size: 13px; border-radius: 3px; text-align: center;
@@ -268,6 +271,8 @@ a.cover:hover { outline: 1.5px solid var(--ink); outline-offset: -1.5px; }
   .post-text { padding: 20px 22px; }
   .reader h1 { margin-top: 28px; }
   .prose p, .prose ul, .prose ol { font-size: 17px; }
+  .artists { display: block; }
+  .artist { margin-bottom: 56px; }
   .albums { grid-template-columns: repeat(3, 1fr); gap: 28px 14px; }
   .tracks { font-size: 13px; }
 }

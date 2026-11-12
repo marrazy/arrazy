@@ -1,6 +1,6 @@
 // Playlist page. Albums come from api.arrazy.com/v1/spotify/playlist,
 // which reads backend/src/api/data/playlist.json. Shows sample albums until that works.
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { getJSON, type Playlist } from "../lib/api";
 import { samplePlaylist } from "../data/sample";
 
@@ -22,8 +22,10 @@ export default function PlaylistView() {
   return (
     <>
       {isSample && <p className="note">These are sample albums. Add your own to playlist.json in the backend.</p>}
+      {/* Each artist asks for room for its albums (--n), so small ones sit side by side when they fit */}
+      <div className="artists">
       {data.artists.map((artist) => (
-        <div className="artist" key={artist.name}>
+        <div className="artist" key={artist.name} style={{ "--n": artist.albums.length } as CSSProperties}>
           <h2>{artist.name}</h2>
           <div className="albums">
             {artist.albums.map((al) => (
@@ -49,6 +51,7 @@ export default function PlaylistView() {
           </div>
         </div>
       ))}
+      </div>
     </>
   );
 }
