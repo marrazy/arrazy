@@ -10,7 +10,29 @@
     {
       "name": "Jane Remover",
       "albums": [
-        "https://open.spotify.com/album/0rsCXQ9QyrLaTc2a5fvsZR?si=6jt1YLTESQ2gMY8ZuccbMg"
+        "https://open.spotify.com/album/0rsCXQ9QyrLaTc2a5fvsZR?si=6jt1YLTESQ2gMY8ZuccbMg",
+        "https://open.spotify.com/album/2oDOQMK2fcaNs3DnQUoer5",
+        "https://open.spotify.com/album/2XeflvA0dNvjpX0vxukgiv",
+        "https://open.spotify.com/album/0zfRCNRF2ya1KZDtgGXUgI"
+      ]
+    },
+    {
+      "name": "Ninajirachi",
+      "albums": [
+        "https://open.spotify.com/album/77CZUF57sYqgtznUe3OikQ"
+      ]
+    },
+    {
+      "name": "Tiffany Day",
+      "albums": [
+        "https://open.spotify.com/album/4T7qu6MdxoGjzZPErRWgsO"
+      ]
+    },
+    {
+      "name": "Porter Robinson",
+      "albums": [
+        "https://open.spotify.com/album/3QITXlmmt93E176jzVqKUb",
+        "https://open.spotify.com/album/7aPEoTeFJSI5TrMqlPRmUK"
       ]
     }
   ]
