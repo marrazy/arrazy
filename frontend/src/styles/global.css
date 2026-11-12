@@ -58,8 +58,10 @@ img { display: block; max-width: 100%; }
 .contact-list .mail { font-size: 13px; color: var(--ink-soft); margin-top: -8px; }
 
 /* ---------- main ---------- */
-main { margin-left: var(--side); padding: 36px 56px 120px 40px; min-height: 100vh; }
-h1.title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 72px; }
+/* The top padding (36px + 39px) lines each page's first line up with the name in the sidebar,
+   which sits below the capybara logo. Change both together if the logo size changes. */
+main { margin-left: var(--side); padding: 75px 56px 120px 40px; min-height: 100vh; }
+h1.title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.4; margin: 0 0 72px; }
 .note { font-size: 14px; color: var(--ink-soft); margin: -56px 0 40px; max-width: 640px; }
 
 /* ---------- home ---------- */
