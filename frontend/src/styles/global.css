@@ -75,6 +75,14 @@ h1.title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-heig
 }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .live { color: var(--ink); }
+/* Landing page typing intro (the script is in pages/index.astro) */
+::highlight(untyped) { color: transparent; }
+.home.typing :is(a, .pick):not(.typed) { text-decoration-color: transparent; }
+.home.typing .avatar:not(.typed) { opacity: 0; }
+.home .avatar { transition: opacity 0.2s ease; }
+.type-caret { position: absolute; z-index: 5; width: 2px; background: var(--ink); pointer-events: none; }
+.type-caret.done { animation: caret-blink 1s steps(1) forwards; }
+@keyframes caret-blink { 0%, 50% { opacity: 1; } 25%, 75%, 100% { opacity: 0; } }
 .out { display: inline-block; margin-top: 24px; font-size: 15px; color: var(--ink-soft); text-underline-offset: 6px; }
 .pick {
   padding: 0; color: var(--ink); text-decoration: underline dashed var(--ink-soft);

@@ -27,4 +27,106 @@ import { LINKS, SITE } from "../config";
     </p>
     <a class="out u" href={LINKS.github} target="_blank" rel="noopener">GitHub ↗</a>
   </section>
+
+  <!-- Inline so it runs before the first paint, otherwise the text would flash before typing -->
+  <script is:inline>
+    // Types the landing page text out, once per browser tab.
+    // The text is never changed: the part not "typed" yet is painted transparent with the
+    // CSS Custom Highlight API, so nothing moves and the live parts (music, clock) keep working.
+    // Skipped for reduced motion and in browsers without highlights. Click, key or scroll finishes it.
+    (() => {
+      const home = document.querySelector(".home");
+      const DURATION = 1600; // ms for the whole page, however long the text is
+      const MARKED = "a, .pick, .avatar"; // things with an underline or image, shown once reached
+      if (!home || !window.CSS?.highlights || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      try {
+        if (sessionStorage.getItem("home-typed")) return;
+        sessionStorage.setItem("home-typed", "1");
+      } catch {}
+
+      const untyped = new Range();
+      CSS.highlights.set("untyped", new Highlight(untyped));
+      home.classList.add("typing");
+      const caret = document.createElement("span");
+      caret.className = "type-caret";
+      caret.setAttribute("aria-hidden", "true");
+      document.body.append(caret);
+
+      // Calls each(node, offset, n) for every visible character, counting a run of spaces and
+      // line breaks as one (as the browser shows it). Stops early if each returns false.
+      function walk(each) {
+        const walker = document.createTreeWalker(home, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) => (n.parentElement.closest("script, style, template") ? 2 : 1),
+        });
+        let n = 0;
+        let lastWasSpace = true;
+        for (let node; (node = walker.nextNode()); ) {
+          for (let i = 0; i < node.data.length; i++) {
+            const space = /\s/.test(node.data[i]);
+            if (space && lastWasSpace) continue;
+            lastWasSpace = space;
+            if (each(node, i, n++) === false) return;
+          }
+        }
+      }
+
+      let total = 0;
+      walk(() => { total++; });
+      let start = performance.now();
+      const finish = () => { start = -Infinity; };
+      for (const type of ["pointerdown", "keydown", "wheel", "touchmove"]) {
+        addEventListener(type, finish, { once: true, passive: true });
+      }
+
+      function place(rect, atEnd) {
+        caret.style.left = `${(atEnd ? rect.right : rect.left) + scrollX}px`;
+        caret.style.top = `${rect.top + scrollY}px`;
+        caret.style.height = `${rect.height}px`;
+      }
+
+      function frame(now) {
+        const shown = Math.floor(((now - start) / DURATION) * total);
+        let next = null;
+        let last = null;
+        let lastMarked = null;
+        walk((node, i, n) => {
+          if (n >= shown) {
+            next = [node, i];
+            return false;
+          }
+          last = [node, i];
+          const el = node.parentElement.closest(MARKED);
+          // Leave the music line alone until React has taken it over (astro-island loses "ssr")
+          if (el && el !== lastMarked && home.contains(el) && !el.closest("astro-island[ssr]")) {
+            el.classList.add("typed");
+            lastMarked = el;
+          }
+        });
+
+        const r = new Range();
+        if (next) {
+          untyped.setStart(next[0], next[1]);
+          untyped.setEnd(home, home.childNodes.length);
+          r.setStart(next[0], next[1]);
+          r.setEnd(next[0], next[1] + 1);
+          place(r.getBoundingClientRect(), false);
+          requestAnimationFrame(frame);
+          return;
+        }
+
+        // Done
+        CSS.highlights.delete("untyped");
+        home.classList.remove("typing");
+        if (last) {
+          r.setStart(last[0], last[1]);
+          r.setEnd(last[0], last[1] + 1);
+          place(r.getBoundingClientRect(), true);
+        }
+        caret.classList.add("done");
+        setTimeout(() => caret.remove(), 1200);
+      }
+      // First step right away (not on the next frame), so the text is hidden before the first paint
+      frame(performance.now());
+    })();
+  </script>
 </Base>
