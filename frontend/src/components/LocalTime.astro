@@ -1,11 +1,11 @@
 ---
-// "it's currently 11:42 pm here in Sydney, so i'm probably resting."
+// "it's currently 11:42 pm, so i'm probably resting." (Sydney time, from SITE.timezone)
 // The time is filled in by the browser, so it's always live.
 import { SITE } from "../config";
 ---
 
 <span class="local-time" data-tz={SITE.timezone}>
-  it's currently <span class="live" data-clock>…</span> here in {SITE.city}, so i'm probably
+  it's currently <span class="live" data-clock>…</span>, so i'm probably
   <span class="live" data-doing>…</span>.
 </span>
 

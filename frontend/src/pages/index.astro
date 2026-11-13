@@ -10,20 +10,22 @@ import { LINKS, SITE } from "../config";
     <p class="hello">
       hi, my name is
       <span class="avatar"><img src={SITE.avatar} alt="" onerror="this.remove()" />A</span>
-      {SITE.name}.
+      {SITE.name.toLowerCase()}.
     </p>
     <p>
-      currently studying Information Technology (Honours) @ <a class="u" href={LINKS.uts} target="_blank" rel="noopener">UTS</a>,
-      and working in the data science, machine learning, and data visualisation and engineering fields.
+      currently studying info tech @ <a class="u" href={LINKS.uts} target="_blank" rel="noopener">uts</a>,
+      studying data analytics, networking, and cybersecurity, but most of my interests are in data analytics and engineering.
     </p>
     <MusicLine client:load />
     <p>
-      i tend to do a lot in life, and some of those thoughts turn into <a class="u" href="/projects/">projects</a>,
-      <a class="u" href="/writings/">writings</a>, or snippets of <a class="u" href="/life/">photographs</a>. <LocalTime />
+      i like strolling around town while i think, and some of those thoughts turn into
+      <a class="u" href="/projects/">things i make</a>, <a class="u" href="/writings/">writing</a>,
+      or snippets of <a class="u" href="/life/">photographs</a>. <LocalTime />
     </p>
     <p>
-      if you are interested in my career, check my <a class="u" href={LINKS.github} target="_blank" rel="noopener">GitHub</a>
-      or <a class="u" href="/work/">professional Work</a>.
+      if you are interested in my career or work, check my <a class="u" href={LINKS.github} target="_blank" rel="noopener">github page</a>
+      or <a class="u" href="/work/">professional work</a>. i'm currently an incoming software engineer intern @
+      <a class="u" href={LINKS.pertamina} target="_blank" rel="noopener">pertamina</a>.
     </p>
     <a class="out u" href={LINKS.github} target="_blank" rel="noopener">GitHub ↗</a>
   </section>

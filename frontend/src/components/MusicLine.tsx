@@ -114,10 +114,10 @@ export default function MusicLine() {
   return (
     <>
       <p>
-        i enjoy listening to music, especially from {pick("top", top.name)}, and{" "}
+        in the evenings and free time, i like to enjoy music by {pick("top", top.name)}, and{" "}
         {np.playing ? "am currently listening to" : "the last song i played was"}{" "}
-        {pick("track", np.title)} by {pick("artist", np.artist)}. check my{" "}
-        <a className="u" href="/playlist/">playlists</a>.
+        {pick("track", np.title)} by {pick("artist", np.artist)}. check out my{" "}
+        <a className="u" href="/playlist/">playlist</a>.
       </p>
       {card &&
         createPortal(
