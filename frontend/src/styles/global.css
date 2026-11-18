@@ -152,6 +152,10 @@ h1.title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-heig
 .row-inner p { margin-bottom: 22px; }
 .row-inner .meta { font-size: 14px; color: var(--ink-soft); }
 .row-inner .link { font-size: 15px; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+.row-links { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.row-inner .shot { display: block; margin: 4px 0 28px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--tile); }
+.row-inner .shot img { width: 100%; height: auto; transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.row-inner .shot:hover img { transform: scale(1.015); }
 
 /* ---------- writings ---------- */
 .posts { display: flex; flex-direction: column; gap: 18px; max-width: 1100px; }
