@@ -55,7 +55,7 @@ write("manifest.webmanifest", manifest);
 version["manifest.webmanifest"] = hash(manifest);
 
 // 3. The page
-const page = swap(text("index.html"), "index.html", [
+let page = swap(text("index.html"), "index.html", [
   "styles.css",
   "app.js",
   "manifest.webmanifest",
@@ -63,11 +63,15 @@ const page = swap(text("index.html"), "index.html", [
   "icon-192.png",
   "fonts/geist-latin-wght-normal.woff2",
 ]);
+// 4. The offline code: save the versioned files, under a cache name that changes with every release.
+//    The app loads it as /badminton/sw.js?v=<release>. Phones still registered with the plain
+//    /badminton/sw.js address get the same new content there.
+const build = hash(Object.entries(version).sort().map(([f, v]) => `${f}=${v}`).join("\n") + page);
+// The release id goes into the page, which the app uses for the address of the offline code.
+if (!page.includes('<meta name="app-build" content="dev" />')) throw new Error("version-badminton: index.html has no app-build tag");
+page = page.replace('<meta name="app-build" content="dev" />', `<meta name="app-build" content="${build}" />`);
 write("index.html", page);
 
-// 4. The offline code: save the versioned files, under a cache name that changes with every release.
-//    sw.js keeps its plain address so phones always find it, and its content changes with each release.
-const build = hash(Object.entries(version).sort().map(([f, v]) => `${f}=${v}`).join("\n") + page);
 let sw = swap(text("sw.js"), "sw.js", Object.keys(version));
 if (!/const CACHE = "badminton-[^"]+";/.test(sw)) throw new Error("version-badminton: sw.js has no CACHE name");
 sw = sw.replace(/const CACHE = "badminton-[^"]+";/, `const CACHE = "badminton-${build}";`);
