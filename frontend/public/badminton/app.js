@@ -698,6 +698,11 @@ if ("serviceWorker" in navigator) {
     location.reload();
   });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/badminton/sw.js", { scope: "/badminton/", updateViaCache: "none" }).catch(() => {});
+    // The page is never cached, so the release id in it is always current. Putting it in the address of
+    // the offline code makes the phone fetch the new offline code at once, even if Cloudflare still holds
+    // an old copy of the plain /badminton/sw.js address.
+    const build = document.querySelector('meta[name="app-build"]')?.content;
+    const script = build && build !== "dev" ? `/badminton/sw.js?v=${build}` : "/badminton/sw.js";
+    navigator.serviceWorker.register(script, { scope: "/badminton/", updateViaCache: "none" }).catch(() => {});
   });
 }
