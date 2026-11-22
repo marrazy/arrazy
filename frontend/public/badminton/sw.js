@@ -1,4 +1,6 @@
 // Offline support for /badminton/.
+// The build adds ?v=<version> to every file address and renames CACHE for each release
+// (scripts/version-badminton.mjs), so old and new files can never be mixed.
 // Online, every file comes from the server first, checked past the browser's own cache, so a new
 // release always arrives complete and never mixes old and new files. The saved copy is used only
 // when there is no connection, or when the network takes too long (a weak signal at the court).
@@ -45,7 +47,8 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== location.origin || !url.pathname.startsWith("/badminton/")) return;
 
   // Pages are saved under one key, without their query string, so "/badminton/?x" works offline too.
-  const key = req.mode === "navigate" ? "/badminton/" : url.pathname;
+  // Other files keep their ?v= version, so a saved copy is only ever used for the exact release it belongs to.
+  const key = req.mode === "navigate" ? "/badminton/" : url.pathname + url.search;
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE);
