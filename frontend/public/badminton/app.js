@@ -1,7 +1,8 @@
 import {
   SKILL_MAX,
   clampSkill,
-  makeTeams,
+  makePairs,
+  pairKey,
   makeRound,
   recordRound,
   newMatch,
@@ -21,8 +22,7 @@ const TABS = ["players", "teams", "courts", "score"];
 const defaults = () => ({
   tab: "players",
   players: [],
-  teamCount: 2,
-  teams: null,
+  pairs: null,
   courts: 2,
   format: "doubles",
   round: null,
@@ -48,6 +48,10 @@ function load() {
           .map((p) => ({ id: String(p.id), name: p.name.slice(0, 30), skill: clampSkill(p.skill), here: p.here !== false }))
       : [];
     if (!TABS.includes(s.tab)) s.tab = "players";
+    // Teams were made differently in the first version; drop them so old data can't break the page.
+    delete s.teams;
+    delete s.teamCount;
+    if (!s.pairs || !Array.isArray(s.pairs.teams) || !Array.isArray(s.pairs.matches)) s.pairs = null;
     if (!Array.isArray(s.undo)) s.undo = [];
     if (typeof s.stats !== "object" || !s.stats) s.stats = {};
     if (typeof s.partners !== "object" || !s.partners) s.partners = {};
@@ -287,57 +291,66 @@ function renderPlayers(root) {
 
 // ---------- teams ----------
 
+function sideName(side) {
+  return side.map((p) => p.name).join(" & ");
+}
+
+const avgOf = (side) => side.reduce((t, p) => t + p.skill, 0) / side.length;
+
+function matchCard(m, title) {
+  const side = (players, cls) =>
+    h("div", { class: `side ${cls}` },
+      players.map((p) => h("span", {}, `${p.name} `, h("span", { class: "lvl" }, stars(p.skill)))),
+      players.length > 1 ? h("span", { class: "muted small" }, `avg ${avgOf(players).toFixed(1)}`) : null,
+    );
+  return h(
+    "div",
+    { class: "card court" },
+    h("h3", {}, h("span", {}, title), h("span", { class: `tag${m.diff === 0 ? " good" : ""}` }, m.diff === 0 ? "even" : `level gap ${m.diff}`)),
+    h("div", { class: "sides" }, side(m.a, "a"), h("span", { class: "vs" }, "vs"), side(m.b, "b")),
+    h("button", { type: "button", class: "btn small-btn", onclick: () => startScoreFor(sideName(m.a), sideName(m.b)) }, "Keep score"),
+  );
+}
+
 function renderTeams(root) {
   const present = here();
-  const max = Math.max(2, present.length);
-  const teamCount = Math.min(Math.max(2, state.teamCount), max);
   const canMake = present.length >= 2;
+
+  const make = () => {
+    // Treat the current teams as "already played together", so making teams again gives
+    // different partners whenever that is just as fair.
+    const partners = {};
+    if (state.pairs) for (const t of state.pairs.teams) partners[pairKey(t.players[0].id, t.players[1].id)] = 1;
+    update({ pairs: makePairs(present, partners) });
+  };
 
   const controls = h(
     "div",
     { class: "card" },
-    h("h2", {}, "Split into teams"),
-    h("p", { class: "muted small" }, `Uses the ${present.length} player${present.length === 1 ? "" : "s"} marked as here. Teams get the same number of players (or one more) and the closest possible average level.`),
-    stepper("Teams", teamCount, 2, max, (n) => update({ teamCount: n })),
-    h(
-      "button",
-      { type: "button", class: "btn primary", disabled: !canMake, onclick: () => update({ teams: makeTeams(present, teamCount), teamCount }) },
-      state.teams ? "Make new teams" : "Make teams",
-    ),
+    h("h2", {}, "Teams of 2"),
+    h("p", { class: "muted small" }, `Uses the ${present.length} player${present.length === 1 ? "" : "s"} marked as here. Every team's average level is made as close as possible to the group's average, so strong players are paired with less strong ones. Then the closest teams play each other.`),
+    h("button", { type: "button", class: "btn primary", disabled: !canMake, onclick: make }, state.pairs ? "Make new teams" : "Make teams"),
     canMake ? null : h("p", { class: "msg" }, "Mark at least 2 players as here on the Players tab."),
   );
 
   const parts = [controls];
-  if (state.teams) {
-    const avgs = state.teams.map((t) => t.average);
-    const spread = Math.max(...avgs) - Math.min(...avgs);
+  const pr = state.pairs;
+  if (pr && pr.teams.length) {
+    const avgs = pr.teams.map((t) => t.average);
+    const groupAvg = pr.teams.reduce((t, x) => t + x.total, 0) / (pr.teams.length * 2);
     parts.push(
-      h("p", { class: "muted small" }, `Difference between the strongest and weakest team average: ${spread.toFixed(2)}`),
-      h(
-        "div",
-        { class: "grid" },
-        state.teams.map((t, i) =>
-          h(
-            "div",
-            { class: "card team" },
-            h("h3", {}, h("span", {}, `Team ${i + 1}`), h("span", { class: "tag" }, `avg ${t.average.toFixed(2)} · total ${t.total}`)),
-            h("ul", {}, t.players.map((p) => h("li", {}, h("span", {}, p.name), h("span", { class: "lvl", "aria-label": `level ${p.skill}` }, stars(p.skill))))),
-          ),
-        ),
-      ),
+      h("p", { class: "muted small" }, `Group average ${groupAvg.toFixed(2)}. Team averages go from ${Math.min(...avgs).toFixed(1)} to ${Math.max(...avgs).toFixed(1)}.`),
+      h("div", { class: "grid" }, pr.matches.map((m, i) => matchCard(m, `Match ${i + 1}`))),
+      pr.spareTeam ? h("p", { class: "muted" }, `Waiting for a court: ${sideName(pr.spareTeam.players)}`) : null,
     );
-    if (state.teams.length === 2) {
-      parts.push(h("button", { type: "button", class: "btn block", onclick: () => startScoreFor("Team 1", "Team 2") }, "Keep score: Team 1 vs Team 2"));
-    }
   }
-  root.replaceChildren(...parts);
+  if (pr && pr.leftover) {
+    parts.push(h("p", { class: "muted" }, `Sitting out (odd number of players): ${pr.leftover.name}`));
+  }
+  root.replaceChildren(...parts.filter(Boolean));
 }
 
 // ---------- courts ----------
-
-function sideName(side) {
-  return side.map((p) => p.name).join(" & ");
-}
 
 function renderCourts(root) {
   const present = here();
@@ -350,7 +363,7 @@ function renderCourts(root) {
     "div",
     { class: "card" },
     h("h2", {}, "Court matches"),
-    h("p", { class: "muted small" }, "Players of a similar level share a court, and the two sides are balanced. People who have played the fewest games go on first, so everyone gets a fair turn."),
+    h("p", { class: "muted small" }, "In doubles, every team of 2 is made as close as possible to the average level, and the closest teams play each other. Partners change between rounds when that is just as fair. People who have played the fewest games go on first, so everyone gets a fair turn."),
     h("div", { class: "row between" }, h("span", {}, "Format"), seg([["doubles", "Doubles"], ["singles", "Singles"]], state.format, (f) => update({ format: f }), "Format")),
     stepper("Courts", state.courts, 1, 12, (n) => update({ courts: n })),
     possible === 0
@@ -372,21 +385,7 @@ function renderCourts(root) {
       h(
         "div",
         { class: "grid" },
-        state.round.courts.map((c, i) =>
-          h(
-            "div",
-            { class: "card court" },
-            h("h3", {}, h("span", {}, `Court ${i + 1}`), h("span", { class: `tag${c.diff === 0 ? " good" : ""}` }, c.diff === 0 ? "even" : `level gap ${c.diff}`)),
-            h(
-              "div",
-              { class: "sides" },
-              h("div", { class: "side a" }, c.a.map((p) => h("span", {}, `${p.name} `, h("span", { class: "lvl" }, stars(p.skill))))),
-              h("span", { class: "vs" }, "vs"),
-              h("div", { class: "side b" }, c.b.map((p) => h("span", {}, `${p.name} `, h("span", { class: "lvl" }, stars(p.skill))))),
-            ),
-            h("button", { type: "button", class: "btn small-btn", onclick: () => startScoreFor(sideName(c.a), sideName(c.b)) }, "Keep score"),
-          ),
-        ),
+        state.round.courts.map((c, i) => matchCard(c, `Court ${i + 1}`)),
       ),
       state.round.resting.length
         ? h("p", { class: "muted" }, `Resting: ${state.round.resting.map((p) => p.name).join(", ")}`)
@@ -445,7 +444,7 @@ function renderCourts(root) {
       ),
     );
   }
-  root.replaceChildren(...parts);
+  root.replaceChildren(...parts.filter(Boolean));
 }
 
 // ---------- score counter ----------
@@ -599,7 +598,7 @@ function renderScore(root) {
     ),
     h("p", { class: "muted small" }, "Tap a side when it wins the rally. The rally winner serves next: from the right court on an even score, the left on an odd score."),
   );
-  root.replaceChildren(...parts);
+  root.replaceChildren(...parts.filter(Boolean));
 }
 
 // ---------- keep the screen on while scoring ----------

@@ -1,6 +1,6 @@
 // Offline support for /badminton/. Serves saved files first, then refreshes them in the background,
 // so the app opens instantly at the court even with no signal and picks up updates on the next visit.
-const CACHE = "badminton-v1";
+const CACHE = "badminton-v2";
 const FILES = [
   "/badminton/",
   "/badminton/index.html",
