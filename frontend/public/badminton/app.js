@@ -689,7 +689,15 @@ for (const b of document.querySelectorAll(".tabs button")) {
 render();
 
 if ("serviceWorker" in navigator) {
+  // When a new version of the app takes over, reload once so the page, styles and code all match.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloaded) return;
+    reloaded = true;
+    location.reload();
+  });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/badminton/sw.js", { scope: "/badminton/" }).catch(() => {});
+    navigator.serviceWorker.register("/badminton/sw.js", { scope: "/badminton/", updateViaCache: "none" }).catch(() => {});
   });
 }
