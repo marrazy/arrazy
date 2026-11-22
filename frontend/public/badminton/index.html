@@ -3,16 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Badminton · Teams and score counter</title>
-    <meta name="description" content="Make fair badminton teams and court matches from each player's level, and keep score with a simple counter." />
-    <meta name="theme-color" content="#221f1e" />
+    <title>Badminton · Fair teams and score counter</title>
+    <meta name="description" content="Make fair 2v2 badminton teams from each player's level, rotate courts fairly and keep score." />
+    <meta name="theme-color" content="#f6f6f7" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Badminton" />
     <link rel="manifest" href="/badminton/manifest.webmanifest" />
     <link rel="icon" href="/badminton/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/badminton/icon-192.png" />
+    <link rel="preload" href="/badminton/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/badminton/styles.css" />
     <script>
       // Keep relative links and the offline cache working if the page was opened without the last slash.
@@ -21,7 +22,16 @@
   </head>
   <body>
     <header class="top">
-      <h1>Badminton</h1>
+      <nav aria-label="Breadcrumb">
+        <ol class="crumbs">
+          <li class="logo" aria-hidden="true">
+            <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10" /><path d="M5 3l2.5 10.5" /><path d="M15 3l-2.5 10.5" /><path d="M10 3v10.5" /><path d="M6.2 8h7.6" /><path d="M7.5 13.5h5v1a2.5 2.5 0 0 1-5 0z" /></svg>
+          </li>
+          <li>Badminton</li>
+          <li class="sep" aria-hidden="true">/</li>
+          <li><span aria-current="page" id="crumb-page">Players</span></li>
+        </ol>
+      </nav>
       <span class="top-sub" id="top-sub"></span>
     </header>
 
@@ -32,16 +42,22 @@
       <section class="view" id="view-score" aria-label="Score" hidden></section>
     </main>
 
-    <nav class="tabs" aria-label="Sections">
-      <button type="button" data-tab="players" aria-current="page"><span class="ic" aria-hidden="true">👥</span>Players</button>
-      <button type="button" data-tab="teams"><span class="ic" aria-hidden="true">⚖️</span>Teams</button>
-      <button type="button" data-tab="courts"><span class="ic" aria-hidden="true">🏸</span>Courts</button>
-      <button type="button" data-tab="score"><span class="ic" aria-hidden="true">🔢</span>Score</button>
+    <nav class="tabs" aria-label="Main">
+      <span class="brand">
+        <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10" /><path d="M5 3l2.5 10.5" /><path d="M15 3l-2.5 10.5" /><path d="M10 3v10.5" /><path d="M6.2 8h7.6" /><path d="M7.5 13.5h5v1a2.5 2.5 0 0 1-5 0z" /></svg>
+        Badminton
+      </span>
+      <span class="nav-label">Session</span>
+      <button type="button" data-tab="players" data-icon="players" aria-current="page">Players</button>
+      <button type="button" data-tab="teams" data-icon="teams">Teams</button>
+      <button type="button" data-tab="courts" data-icon="courts">Courts</button>
+      <button type="button" data-tab="score" data-icon="score">Score</button>
+      <p class="nav-foot">Saved on this device. Works without a connection after the first visit.</p>
     </nav>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-    <noscript><p class="pad">This app needs JavaScript turned on.</p></noscript>
+    <noscript><p style="padding: 16px">This app needs JavaScript turned on.</p></noscript>
     <script type="module" src="/badminton/app.js"></script>
   </body>
 </html>
