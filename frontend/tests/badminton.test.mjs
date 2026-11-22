@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   clampSkill,
   shuffle,
-  makeTeams,
+  makePairs,
   makeRound,
   recordRound,
   pairKey,
@@ -46,73 +46,115 @@ test("shuffle keeps every item and does not change the input", () => {
   assert.deepEqual(out.slice().sort(), input);
 });
 
-// ---------- teams ----------
+// ---------- teams of 2 ----------
 
-test("makeTeams uses every player exactly once", () => {
-  const ps = people([5, 4, 4, 3, 3, 2, 2, 1, 1]);
-  for (let k = 2; k <= 5; k++) {
-    const teams = makeTeams(ps, k, seeded(k));
-    assert.equal(teams.length, k);
-    assert.deepEqual(allIds(teams), ps.map((p) => p.id).sort());
+// Every way to split an even list into teams of 2.
+function allPairings(list) {
+  if (list.length === 0) return [[]];
+  const [first, ...rest] = list;
+  const out = [];
+  for (let i = 0; i < rest.length; i++) {
+    const others = rest.filter((_, j) => j !== i);
+    for (const p of allPairings(others)) out.push([[first, rest[i]], ...p]);
+  }
+  return out;
+}
+const spreadOf = (totals) => Math.max(...totals) - Math.min(...totals);
+const squares = (totals) => {
+  const mean = totals.reduce((a, b) => a + b, 0) / totals.length;
+  return totals.reduce((t, x) => t + (x - mean) ** 2, 0);
+};
+const teamIds = (r) => [...r.teams.flatMap((t) => t.players.map((p) => p.id)), ...(r.leftover ? [r.leftover.id] : [])].sort();
+
+test("makePairs makes teams of exactly 2 and uses everyone once", () => {
+  for (let n = 2; n <= 15; n++) {
+    const ps = people(Array.from({ length: n }, (_, i) => (i % 5) + 1));
+    const r = makePairs(ps, {}, seeded(n));
+    for (const t of r.teams) assert.equal(t.players.length, 2);
+    assert.equal(r.teams.length, Math.floor(n / 2));
+    assert.equal(Boolean(r.leftover), n % 2 === 1);
+    assert.deepEqual(teamIds(r), ps.map((p) => p.id).sort());
   }
 });
 
-test("makeTeams sizes differ by at most one", () => {
-  for (let n = 2; n <= 17; n++) {
-    for (let k = 2; k <= Math.min(6, n); k++) {
-      const sizes = makeTeams(people(Array.from({ length: n }, (_, i) => (i % 5) + 1)), k, seeded(n * 10 + k)).map((t) => t.players.length);
-      assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1, `n=${n} k=${k} sizes=${sizes}`);
-    }
-  }
+test("makePairs pairs the strongest with the weakest", () => {
+  const r = makePairs(people([5, 5, 4, 4, 2, 2, 1, 1]), {}, seeded(1));
+  // Every team adds up to 6, average 3, the same as the group.
+  assert.deepEqual(r.teams.map((t) => t.total), [6, 6, 6, 6]);
+  for (const t of r.teams) assert.equal(t.average, 3);
 });
 
-test("makeTeams finds a perfect split when one exists", () => {
-  // 5+1+3+3 vs 4+2+4+2 style: totals 24 over 8 players -> two teams of 12
-  const teams = makeTeams(people([5, 5, 4, 3, 2, 1, 1, 3]), 2, seeded(3));
-  assert.equal(teams[0].total, teams[1].total);
-});
-
-test("makeTeams never puts the two best players together when that is avoidable", () => {
-  for (let seed = 1; seed < 30; seed++) {
-    const teams = makeTeams(people([5, 5, 1, 1]), 2, seeded(seed));
-    for (const t of teams) assert.deepEqual(t.players.map((p) => p.skill), [5, 1]);
-  }
-});
-
-test("makeTeams finds the best possible split for random groups", () => {
-  // Compare with brute force on small groups split into 2 teams.
+test("makePairs always finds the fairest possible teams", () => {
   const rng = seeded(42);
   for (let trial = 0; trial < 300; trial++) {
-    const n = 4 + Math.floor(rng() * 7); // 4..10 players
+    const n = 2 * (2 + Math.floor(rng() * 4)); // 4..10 players
     const skills = Array.from({ length: n }, () => 1 + Math.floor(rng() * 5));
     const ps = people(skills);
-    const teams = makeTeams(ps, 2, seeded(trial));
-    const got = Math.abs(teams[0].average - teams[1].average);
-
-    const half = Math.floor(n / 2);
-    let best = Infinity;
-    for (let mask = 0; mask < 1 << n; mask++) {
-      const size = mask.toString(2).split("1").length - 1;
-      if (size !== half) continue;
-      const a = skills.filter((_, i) => mask & (1 << i));
-      const b = skills.filter((_, i) => !(mask & (1 << i)));
-      const d = Math.abs(a.reduce((x, y) => x + y, 0) / a.length - b.reduce((x, y) => x + y, 0) / b.length);
-      best = Math.min(best, d);
-    }
-    assert.ok(got <= best + 1e-9, `skills=${skills} got=${got} best=${best}`);
+    const r = makePairs(ps, {}, seeded(trial));
+    const got = r.teams.map((t) => t.total);
+    const all = allPairings(ps).map((pairing) => pairing.map(([a, b]) => a.skill + b.skill));
+    const bestSpread = Math.min(...all.map(spreadOf));
+    const bestSquares = Math.min(...all.map(squares));
+    assert.equal(spreadOf(got), bestSpread, `skills=${skills}`);
+    assert.ok(squares(got) <= bestSquares + 1e-9, `skills=${skills}`);
   }
 });
 
-test("makeTeams handles more teams than players and empty lists", () => {
-  const teams = makeTeams(people([3, 2]), 5, seeded(1));
-  assert.equal(teams.length, 2);
-  assert.deepEqual(makeTeams([], 2, seeded(1)).map((t) => t.players.length), [0]);
+test("makePairs with an odd number leaves out the player that keeps teams most even", () => {
+  const rng = seeded(7);
+  for (let trial = 0; trial < 150; trial++) {
+    const n = 5 + 2 * Math.floor(rng() * 3); // 5, 7, 9
+    const skills = Array.from({ length: n }, () => 1 + Math.floor(rng() * 5));
+    const ps = people(skills);
+    const r = makePairs(ps, {}, seeded(trial));
+    let best = Infinity;
+    for (const out of ps) {
+      const rest = ps.filter((p) => p !== out);
+      for (const pairing of allPairings(rest)) best = Math.min(best, squares(pairing.map(([a, b]) => a.skill + b.skill)));
+    }
+    assert.ok(squares(r.teams.map((t) => t.total)) <= best + 1e-9, `skills=${skills} left out ${r.leftover.skill}`);
+  }
 });
 
-test("makeTeams reports totals and averages", () => {
-  const teams = makeTeams(people([4, 2]), 2, seeded(1));
-  const t4 = teams.find((t) => t.total === 4);
-  assert.equal(t4.average, 4);
+test("makePairs matches the closest teams against each other", () => {
+  const r = makePairs(people([5, 5, 4, 4, 3, 3, 3, 1]), {}, seeded(3));
+  assert.equal(r.matches.length, 2);
+  const sideTotal = (side) => side.reduce((t, p) => t + p.skill, 0);
+  const diffs = r.matches.map((m) => Math.abs(sideTotal(m.a) - sideTotal(m.b)));
+  // totals are 6,7,7,8: closest matching is 8v7 and 7v6, each a gap of 1
+  assert.deepEqual(diffs, [1, 1]);
+  assert.equal(r.spareTeam, null);
+});
+
+test("makePairs with an odd number of teams leaves one team waiting", () => {
+  const r = makePairs(people([5, 4, 3, 3, 2, 1]), {}, seeded(1));
+  assert.equal(r.teams.length, 3);
+  assert.equal(r.matches.length, 1);
+  assert.ok(r.spareTeam);
+});
+
+test("makePairs picks new partners when it is just as fair", () => {
+  // All the same level: any split is equally fair, so it must avoid the old pairs.
+  const ps = people([3, 3, 3, 3, 3, 3]);
+  const old = { [pairKey("p0", "p1")]: 1, [pairKey("p2", "p3")]: 1, [pairKey("p4", "p5")]: 1 };
+  for (let seed = 1; seed < 20; seed++) {
+    const r = makePairs(ps, old, seeded(seed));
+    for (const t of r.teams) assert.ok(!old[pairKey(t.players[0].id, t.players[1].id)]);
+  }
+});
+
+test("makePairs never gives up fairness to avoid repeat partners", () => {
+  const ps = people([5, 4, 2, 1]);
+  const partners = { [pairKey("p0", "p3")]: 5, [pairKey("p1", "p2")]: 5 };
+  const r = makePairs(ps, partners, seeded(1));
+  assert.deepEqual(r.teams.map((t) => t.total), [6, 6]);
+});
+
+test("makePairs handles tiny groups", () => {
+  assert.deepEqual(makePairs([], {}, seeded(1)).teams, []);
+  const one = makePairs(people([3]), {}, seeded(1));
+  assert.equal(one.teams.length, 0);
+  assert.equal(one.leftover.id, "p0");
 });
 
 // ---------- courts ----------
@@ -141,14 +183,43 @@ test("makeRound balances a doubles court: best with weakest", () => {
   assert.deepEqual(sides.sort(), ["1,5", "2,4"]);
 });
 
-test("makeRound puts similar levels on the same court", () => {
+test("makeRound makes every doubles team close to the average, not strong courts and weak courts", () => {
   const ps = people([5, 5, 5, 5, 1, 1, 1, 1]);
   for (let seed = 1; seed < 20; seed++) {
     const round = makeRound(ps, { courts: 2 }, {}, {}, seeded(seed));
     for (const c of round.courts) {
-      const levels = new Set([...c.a, ...c.b].map((p) => p.skill));
-      assert.equal(levels.size, 1);
+      for (const side of [c.a, c.b]) assert.deepEqual(side.map((p) => p.skill).sort(), [1, 5]);
+      assert.equal(c.diff, 0);
     }
+  }
+});
+
+test("makeRound doubles teams are the fairest possible", () => {
+  const rng = seeded(11);
+  for (let trial = 0; trial < 100; trial++) {
+    const skills = Array.from({ length: 8 }, () => 1 + Math.floor(rng() * 5));
+    const ps = people(skills);
+    const round = makeRound(ps, { courts: 2 }, {}, {}, seeded(trial));
+    const totals = round.courts.flatMap((c) => [c.a, c.b]).map((s) => s[0].skill + s[1].skill);
+    const best = Math.min(...allPairings(ps).map((pr) => squares(pr.map(([a, b]) => a.skill + b.skill))));
+    assert.ok(squares(totals) <= best + 1e-9, `skills=${skills}`);
+  }
+});
+
+test("partners change from round to round when it is just as fair", () => {
+  const ps = people([4, 4, 4, 4, 2, 2, 2, 2]);
+  let stats = {};
+  let partners = {};
+  const rng = seeded(5);
+  for (let r = 0; r < 4; r++) {
+    const round = makeRound(ps, { courts: 2 }, stats, partners, rng);
+    for (const c of round.courts) {
+      for (const side of [c.a, c.b]) {
+        assert.deepEqual(side.map((p) => p.skill).sort(), [2, 4]);
+        assert.equal(partners[pairKey(side[0].id, side[1].id)] || 0, 0, `round ${r} repeated a pair`);
+      }
+    }
+    ({ stats, partners } = recordRound(round, ps.map((p) => p.id), stats, partners));
   }
 });
 

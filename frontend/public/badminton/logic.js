@@ -29,96 +29,119 @@ function bySkillDesc(players, rng) {
 const sum = (list) => list.reduce((t, p) => t + p.skill, 0);
 const avg = (list) => (list.length ? sum(list) / list.length : 0);
 
-// ---------- Teams: split everyone into N teams of (almost) equal strength ----------
+// ---------- Teams of 2: every team as close as possible to the group average ----------
 
-// Team sizes never differ by more than one. Teams are balanced on their average skill.
-// Starts from a snake draft, then improves by swapping players. The swap search is repeated
-// from many random starting splits and the fairest result is kept, so it does not get stuck.
-export function makeTeams(players, teamCount, rng = Math.random) {
-  const k = Math.max(1, Math.min(Math.floor(teamCount), players.length || 1));
-  const sorted = bySkillDesc(players, rng);
-  const base = Math.floor(sorted.length / k);
-  const extra = sorted.length % k;
-  const caps = Array.from({ length: k }, (_, i) => base + (i < extra ? 1 : 0));
-  const overall = avg(sorted);
-  const cost = (teams) => teams.reduce((t, team) => t + (avg(team) - overall) ** 2, 0);
+export function pairKey(idA, idB) {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+}
 
-  // Snake draft: 1,2,3,3,2,1,... skipping teams that are full.
-  const draft = (list) => {
-    const teams = Array.from({ length: k }, () => []);
-    let order = [];
-    while (order.length < list.length) {
-      const round = Math.floor(order.length / k);
-      const idx = Array.from({ length: k }, (_, i) => i);
-      order = order.concat(round % 2 === 0 ? idx : idx.reverse());
-    }
-    let pick = 0;
-    for (const p of list) {
-      while (teams[order[pick]].length >= caps[order[pick]]) pick++;
-      teams[order[pick]].push(p);
-      pick++;
-    }
-    return teams;
-  };
+const toTeam = (pair) => {
+  const players = pair.slice().sort((x, y) => y.skill - x.skill || x.name.localeCompare(y.name));
+  return { players, total: sum(players), average: avg(players) };
+};
 
-  // Random split with the right team sizes.
-  const randomSplit = () => {
-    const list = shuffle(sorted, rng);
-    const teams = [];
-    let at = 0;
-    for (const c of shuffle(caps, rng)) {
-      teams.push(list.slice(at, at + c));
-      at += c;
-    }
-    return teams;
-  };
+// How uneven a set of teams is: squared distance of each team total from the mean team total.
+function imbalance(pairs) {
+  if (!pairs.length) return 0;
+  const totals = pairs.map((p) => p[0].skill + p[1].skill);
+  const mean = totals.reduce((a, b) => a + b, 0) / totals.length;
+  return totals.reduce((t, x) => t + (x - mean) ** 2, 0);
+}
 
-  // Swap two players from different teams while it makes things fairer.
-  const improve = (teams) => {
-    let best = cost(teams);
+function repeats(pairs, partners) {
+  return pairs.reduce((t, [a, b]) => t + (partners[pairKey(a.id, b.id)] || 0), 0);
+}
+
+// Pairs an even number of players into teams of 2.
+// Fairness comes first: the most even split possible (strongest with weakest, and so on).
+// Only between equally fair options does it pick partners who have played together less.
+function bestPairing(list, partners, rng) {
+  const n = list.length;
+  if (n < 2) return { pairs: [], imbalance: 0, repeats: 0 };
+  const score = (pairs) => ({ imbalance: imbalance(pairs), repeats: repeats(pairs, partners) });
+  const better = (x, y) => x.imbalance < y.imbalance - 1e-9 || (Math.abs(x.imbalance - y.imbalance) <= 1e-9 && x.repeats < y.repeats);
+
+  // Swap players between two teams while it helps.
+  const improve = (pairs) => {
+    let cur = score(pairs);
     for (let guard = 0; guard < 1000; guard++) {
       let improved = false;
-      for (let a = 0; a < k && !improved; a++) {
-        for (let b = a + 1; b < k && !improved; b++) {
-          for (let i = 0; i < teams[a].length && !improved; i++) {
-            for (let j = 0; j < teams[b].length && !improved; j++) {
-              if (teams[a][i].skill === teams[b][j].skill) continue;
-              [teams[a][i], teams[b][j]] = [teams[b][j], teams[a][i]];
-              const c = cost(teams);
-              if (c < best - 1e-9) {
-                best = c;
-                improved = true;
-              } else {
-                [teams[a][i], teams[b][j]] = [teams[b][j], teams[a][i]];
-              }
+      for (let i = 0; i < pairs.length && !improved; i++) {
+        for (let j = i + 1; j < pairs.length && !improved; j++) {
+          const [a, b] = pairs[i];
+          const [c, d] = pairs[j];
+          for (const [x, y] of shuffle([[[a, c], [b, d]], [[a, d], [b, c]]], rng)) {
+            const old = [pairs[i], pairs[j]];
+            pairs[i] = x;
+            pairs[j] = y;
+            const next = score(pairs);
+            if (better(next, cur)) {
+              cur = next;
+              improved = true;
+              break;
             }
+            [pairs[i], pairs[j]] = old;
           }
         }
       }
       if (!improved) break;
     }
-    return { teams, score: best };
+    return { pairs, ...cur };
   };
 
-  let best = improve(draft(sorted));
-  const tries = k > 1 && sorted.length > 3 ? 150 : 0;
-  for (let t = 0; t < tries && best.score > 1e-9; t++) {
-    const next = improve(randomSplit());
-    if (next.score < best.score - 1e-9) best = next;
+  // Strongest with weakest is always the most even split. Start there, then look for
+  // equally even splits with fewer repeat partners from many random starting points.
+  const sorted = bySkillDesc(list, rng);
+  const start = [];
+  for (let i = 0; i < n / 2; i++) start.push([sorted[i], sorted[n - 1 - i]]);
+  let best = improve(start);
+  const tries = n >= 4 ? 120 : 0;
+  for (let t = 0; t < tries && best.repeats > 0; t++) {
+    const s = shuffle(list, rng);
+    const pairs = [];
+    for (let i = 0; i < n; i += 2) pairs.push([s[i], s[i + 1]]);
+    const next = improve(pairs);
+    if (better(next, best)) best = next;
   }
+  return best;
+}
 
-  return best.teams.map((team) => ({
-    players: team.slice().sort((x, y) => y.skill - x.skill || x.name.localeCompare(y.name)),
-    total: sum(team),
-    average: avg(team),
-  }));
+// Put teams against each other: the two closest teams share a court.
+function matchUp(teams, rng) {
+  const sorted = shuffle(teams, rng).sort((x, y) => y.total - x.total);
+  const matches = [];
+  for (let i = 0; i + 1 < sorted.length; i += 2) {
+    matches.push({ a: sorted[i].players, b: sorted[i + 1].players, diff: Math.abs(sorted[i].total - sorted[i + 1].total) });
+  }
+  return { matches, spare: sorted.length % 2 ? sorted[sorted.length - 1] : null };
+}
+
+// Splits everyone into teams of 2 and matches them up.
+// With an odd number of players, the one who keeps the teams most even sits out.
+// Returns { teams, matches, spareTeam, leftover }
+export function makePairs(players, partners = {}, rng = Math.random) {
+  let leftover = null;
+  let pool = players;
+  if (players.length % 2 === 1) {
+    // Try leaving out one player of each level, keep the fairest result.
+    let best = null;
+    for (const skill of shuffle([...new Set(players.map((p) => p.skill))], rng)) {
+      const out = shuffle(players.filter((p) => p.skill === skill), rng)[0];
+      const rest = players.filter((p) => p !== out);
+      const r = bestPairing(rest, partners, rng);
+      if (!best || r.imbalance < best.r.imbalance - 1e-9 || (Math.abs(r.imbalance - best.r.imbalance) <= 1e-9 && r.repeats < best.r.repeats)) {
+        best = { out, r };
+      }
+    }
+    leftover = best.out;
+    pool = players.filter((p) => p !== leftover);
+  }
+  const teams = bestPairing(pool, partners, rng).pairs.map(toTeam);
+  const { matches, spare } = matchUp(teams, rng);
+  return { teams: teams.sort((x, y) => y.total - x.total), matches, spareTeam: spare, leftover };
 }
 
 // ---------- Courts: one round of balanced matches, with fair sitting out ----------
-
-export function pairKey(idA, idB) {
-  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
-}
 
 // players: [{ id, name, skill }]
 // stats:   { [id]: { played, sat } } games played and rounds sat out this session
@@ -135,34 +158,20 @@ export function makeRound(players, { courts = 1, format = "doubles" } = {}, stat
   const playing = queue.slice(0, needed);
   const resting = queue.slice(needed).sort((x, y) => x.name.localeCompare(y.name));
 
-  // Put players of similar level on the same court, then balance the two sides.
-  const sorted = bySkillDesc(playing, rng);
-  const result = [];
-  for (let c = 0; c < courtCount; c++) {
-    const group = sorted.slice(c * perCourt, (c + 1) * perCourt);
-    if (perCourt === 2) {
-      result.push({ a: [group[0]], b: [group[1]], diff: Math.abs(group[0].skill - group[1].skill) });
-      continue;
+  if (perCourt === 2) {
+    // Singles: players of the closest level play each other.
+    const sorted = bySkillDesc(playing, rng);
+    const result = [];
+    for (let c = 0; c < courtCount; c++) {
+      const [x, y] = sorted.slice(c * 2, c * 2 + 2);
+      result.push({ a: [x], b: [y], diff: Math.abs(x.skill - y.skill) });
     }
-    const [p, q, r, s] = group;
-    const options = shuffle(
-      [
-        [[p, s], [q, r]],
-        [[p, r], [q, s]],
-        [[p, q], [r, s]],
-      ],
-      rng,
-    ).map(([a, b]) => ({
-      a,
-      b,
-      diff: Math.abs(sum(a) - sum(b)),
-      repeats: (partners[pairKey(a[0].id, a[1].id)] || 0) + (partners[pairKey(b[0].id, b[1].id)] || 0),
-    }));
-    options.sort((x, y) => x.diff - y.diff || x.repeats - y.repeats);
-    const { a, b, diff } = options[0];
-    result.push({ a, b, diff });
+    return { courts: result, resting };
   }
-  return { courts: result, resting };
+
+  // Doubles: every team of 2 as close to the average as possible, closest teams play each other.
+  const teams = bestPairing(playing, partners, rng).pairs.map(toTeam);
+  return { courts: matchUp(teams, rng).matches, resting };
 }
 
 // Update session stats after a round has been played.
