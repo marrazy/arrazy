@@ -1,0 +1,17 @@
+{
+  "name": "Badminton · Teams and score counter",
+  "short_name": "Badminton",
+  "description": "Make fair badminton teams and court matches from each player's level, and keep score.",
+  "id": "/badminton/",
+  "start_url": "/badminton/",
+  "scope": "/badminton/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#221f1e",
+  "theme_color": "#221f1e",
+  "icons": [
+    { "src": "/badminton/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/badminton/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/badminton/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

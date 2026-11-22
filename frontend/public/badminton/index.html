@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Badminton · Teams and score counter</title>
+    <meta name="description" content="Make fair badminton teams and court matches from each player's level, and keep score with a simple counter." />
+    <meta name="theme-color" content="#221f1e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Badminton" />
+    <link rel="manifest" href="/badminton/manifest.webmanifest" />
+    <link rel="icon" href="/badminton/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/badminton/icon-192.png" />
+    <link rel="stylesheet" href="/badminton/styles.css" />
+    <script>
+      // Keep relative links and the offline cache working if the page was opened without the last slash.
+      if (location.pathname === "/badminton") history.replaceState(null, "", "/badminton/" + location.search + location.hash);
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <h1>Badminton</h1>
+      <span class="top-sub" id="top-sub"></span>
+    </header>
+
+    <main>
+      <section class="view" id="view-players" aria-label="Players"></section>
+      <section class="view" id="view-teams" aria-label="Teams" hidden></section>
+      <section class="view" id="view-courts" aria-label="Courts" hidden></section>
+      <section class="view" id="view-score" aria-label="Score" hidden></section>
+    </main>
+
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-tab="players" aria-current="page"><span class="ic" aria-hidden="true">👥</span>Players</button>
+      <button type="button" data-tab="teams"><span class="ic" aria-hidden="true">⚖️</span>Teams</button>
+      <button type="button" data-tab="courts"><span class="ic" aria-hidden="true">🏸</span>Courts</button>
+      <button type="button" data-tab="score"><span class="ic" aria-hidden="true">🔢</span>Score</button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <noscript><p class="pad">This app needs JavaScript turned on.</p></noscript>
+    <script type="module" src="/badminton/app.js"></script>
+  </body>
+</html>
