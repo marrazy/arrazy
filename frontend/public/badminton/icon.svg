@@ -1,9 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><title>Badminton</title>
-<rect width="512" height="512" rx="112" fill="#221f1e"/>
-<g transform="rotate(-35 256 256)">
-<path d="M196 120 L316 120 L284 300 L228 300 Z" fill="#ebe5de"/>
-<path d="M226 120 L240 300 M256 120 L256 300 M286 120 L272 300 M200 180 L312 180 M208 240 L304 240" stroke="#a39a92" stroke-width="8" fill="none"/>
-<rect x="222" y="296" width="68" height="22" rx="6" fill="#a39a92"/>
-<path d="M222 318 h68 v14 a34 34 0 0 1 -68 0 Z" fill="#e3a15a"/>
+<rect width="512" height="512" fill="#141415"/>
+<g transform="translate(96 96) scale(16)" fill="none" stroke="#ededed" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+<path d="M5 3h10"/><path d="M5 3l2.5 10.5"/><path d="M15 3l-2.5 10.5"/><path d="M10 3v10.5"/><path d="M6.2 8h7.6"/><path d="M7.5 13.5h5v1a2.5 2.5 0 0 1-5 0z"/>
 </g>
 </svg>
