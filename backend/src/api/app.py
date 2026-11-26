@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
  
 from fastapi import FastAPI
@@ -9,7 +10,9 @@ from api.routers import aqi, spotify, spotify_extra
  
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    playlist_refresher = asyncio.create_task(spotify_extra.keep_playlist_fresh())
     yield
+    playlist_refresher.cancel()
     await spotify.spotify.aclose()
     await aqi.aqi_client.aclose()
  

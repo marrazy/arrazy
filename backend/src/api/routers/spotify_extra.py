@@ -2,6 +2,7 @@
 
 GET /v1/spotify/top-artist   your most played artist over about the last 6 months
 GET /v1/spotify/playlist     the albums listed in data/playlist.json, filled in from Spotify
+                             at startup and every 12 hours by keep_playlist_fresh()
 
 Both reuse the shared SpotifyClient from routers/spotify.py, so there is only one
 token and one HTTP connection. top-artist needs the "user-top-read" scope on your
@@ -10,6 +11,7 @@ refresh token.
 
 import asyncio
 import json
+import logging
 import re
 import time
 from pathlib import Path
@@ -21,12 +23,15 @@ from pydantic import BaseModel
 
 from api.routers.spotify import pick_image, spotify
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/spotify", tags=["spotify"])
 
 API = "https://api.spotify.com/v1"
 PLAYLIST_FILE = Path(__file__).resolve().parent.parent / "data" / "playlist.json"
 TOP_ARTIST_CACHE_SECONDS = 6 * 60 * 60
-PLAYLIST_CACHE_SECONDS = 12 * 60 * 60  # albums rarely change, so keep Spotify calls low
+PLAYLIST_REFRESH_SECONDS = 12 * 60 * 60  # albums rarely change, so keep Spotify calls low
+PLAYLIST_RETRY_SECONDS = 5 * 60  # after a failed load, try again sooner
 
 
 # ---------- shapes ----------
@@ -154,48 +159,43 @@ async def top_artist(response: Response) -> TopArtist:
         return result
 
 
-_playlist: dict[str, Any] = {"data": None, "at": 0.0, "mtime": 0.0}
-_playlist_lock = asyncio.Lock()
+_playlist: Playlist | None = None
+
+
+async def load_playlist() -> Playlist:
+    """Fill in every album in playlist.json from Spotify."""
+    config = json.loads(PLAYLIST_FILE.read_text(encoding="utf-8"))
+    artists: list[Artist] = []
+    for entry in config.get("artists", []):
+        raw = [await fetch_album(album_id(link)) for link in entry.get("albums", [])]
+        main = ((raw[0].get("artists") or [{}])[0].get("name")) if raw else None
+        artists.append(
+            Artist(
+                name=entry.get("name") or main or "Unknown artist",
+                albums=[shape_album(a) for a in raw],
+            )
+        )
+    return Playlist(artists=artists, fetched_at=int(time.time()))
+
+
+async def keep_playlist_fresh() -> None:
+    """Runs for the life of the server: loads the albums at startup, then every 12 hours,
+    so no visitor ever waits for Spotify."""
+    global _playlist
+    while True:
+        try:
+            _playlist = await load_playlist()
+            wait = PLAYLIST_REFRESH_SECONDS
+        except Exception:  # any error must not stop the loop; the last good list stays
+            log.exception("Could not load the playlist from Spotify")
+            wait = PLAYLIST_RETRY_SECONDS
+        await asyncio.sleep(wait)
 
 
 @router.get("/playlist", response_model=Playlist)
 async def playlist(response: Response) -> Playlist:
+    if _playlist is None:
+        # Only before the first load has worked; the site then shows sample albums
+        raise HTTPException(503, "The playlist is still loading")
     response.headers["Cache-Control"] = "public, max-age=600"
-    if not PLAYLIST_FILE.exists():
-        raise HTTPException(500, "playlist.json not found")
-    mtime = PLAYLIST_FILE.stat().st_mtime
-
-    async with _playlist_lock:
-        cached = _playlist["data"]
-        if (
-            cached
-            and mtime == _playlist["mtime"]
-            and time.monotonic() - _playlist["at"] < PLAYLIST_CACHE_SECONDS
-        ):
-            return cached
-
-        config = json.loads(PLAYLIST_FILE.read_text(encoding="utf-8"))
-        try:
-            artists: list[Artist] = []
-            for entry in config.get("artists", []):
-                raw = [
-                    await fetch_album(album_id(link))
-                    for link in entry.get("albums", [])
-                ]
-                main = ((raw[0].get("artists") or [{}])[0].get("name")) if raw else None
-                artists.append(
-                    Artist(
-                        name=entry.get("name") or main or "Unknown artist",
-                        albums=[shape_album(a) for a in raw],
-                    )
-                )
-        except (httpx.HTTPError, KeyError, ValueError) as e:
-            if cached:
-                return cached  # Spotify down or quota hit: keep the last good list
-            raise HTTPException(
-                502, f"Could not load the playlist from Spotify: {e}"
-            ) from e
-
-        result = Playlist(artists=artists, fetched_at=int(time.time()))
-        _playlist.update(data=result, at=time.monotonic(), mtime=mtime)
-        return result
+    return _playlist

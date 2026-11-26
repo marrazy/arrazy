@@ -1,23 +1,20 @@
 // Playlist page. Albums come from api.arrazy.com/v1/spotify/playlist,
-// which reads backend/src/api/data/playlist.json. Shows sample albums until that works.
+// which reads backend/src/api/data/playlist.json. Shows "Loading…" first, and sample albums if that fails.
 import { useEffect, useState, type CSSProperties } from "react";
 import { getJSON, type Playlist } from "../lib/api";
 import { samplePlaylist } from "../data/sample";
 
 export default function PlaylistView() {
-  const [data, setData] = useState<Playlist>(samplePlaylist);
-  const [isSample, setIsSample] = useState(true);
+  const [data, setData] = useState<Playlist | null>(null);
+  const isSample = data === samplePlaylist;
 
   useEffect(() => {
     getJSON<Playlist>("/spotify/playlist", 15000)
-      .then((d) => {
-        if (d.artists?.length) {
-          setData(d);
-          setIsSample(false);
-        }
-      })
-      .catch(() => {});
+      .then((d) => setData(d.artists?.length ? d : samplePlaylist))
+      .catch(() => setData(samplePlaylist));
   }, []);
+
+  if (!data) return <p className="note" role="status">Loading…</p>;
 
   return (
     <>

@@ -209,3 +209,40 @@ async def test_top_artist_asks_for_about_six_months():
  
     assert result.name == "Top One"
     assert route.calls[0].request.url.params["time_range"] == "medium_term"
+
+
+async def test_playlist_loads_in_the_background_and_keeps_the_last_good_list(monkeypatch):
+    import asyncio
+
+    from fastapi import HTTPException, Response
+
+    from api.routers import spotify_extra
+
+    monkeypatch.setattr(spotify_extra, "_playlist", None)
+    with pytest.raises(HTTPException) as error:
+        await spotify_extra.playlist(Response())
+    assert error.value.status_code == 503
+
+    good = spotify_extra.Playlist(artists=[], fetched_at=1)
+    loads = iter([good, httpx.ConnectError("Spotify down")])
+
+    async def fake_load():
+        result = next(loads)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    waits = []
+
+    async def fake_sleep(seconds):
+        waits.append(seconds)
+        if len(waits) == 2:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(spotify_extra, "load_playlist", fake_load)
+    monkeypatch.setattr(spotify_extra.asyncio, "sleep", fake_sleep)
+    with pytest.raises(asyncio.CancelledError):
+        await spotify_extra.keep_playlist_fresh()
+
+    assert waits == [spotify_extra.PLAYLIST_REFRESH_SECONDS, spotify_extra.PLAYLIST_RETRY_SECONDS]
+    assert await spotify_extra.playlist(Response()) is good
